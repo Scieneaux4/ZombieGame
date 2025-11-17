@@ -72,10 +72,22 @@
                 reloadtimer = 0;
             }
         }
+          function usertouch(myevent) {
+            if (myevent.touches[0].clientX < 500 &&
+                myevent.touches[0].clientY > 300
+            )
+                movegunner('u');
+            else if (myevent.touches[0].clientX > 550 &&
+                myevent.touches[0].clientY > 300
+            )
+                movegunner('d');
+            else if (myevent.touches[0].clientY <= 300)
+                gunshot();
+        } 
     </script>
     <title>Zombie Game</title>
 </head>
-<body onkeydown="cordinates(event);" onkeyup="stopgunner();">
+<body onkeydown="cordinates(event);" onkeyup="stopgunner();" ontouchstart="usertouch(event);">
     <form name="Zombie kill Game">
         <div id="MyCanvas" style="width: 1000px; height: 800px; border:1px solid black; position: relative;">
             <img id="gunner" src="gunnerbase.png" style="position: absolute; height: 80px; left: 0px; width:80px; top: 640px">
