@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <script>
+        var movetimer = 0;
+        function movegunner(direction) {
+            if (movetimer)
+                return;
+            movetimer = setTimeout(gunnerframe, 40);
+            var movement = parseInt(gunnery.value);
+            function gunnerframe() {
+                if (direction == 'u')
+                    movement -= 1;
+                else
+                    movement += 1;
+                if (movement < 0)
+                    movement = 0;
+                else if (movement > 9)
+                    movement = 9;
+                var top = movement * 80;
+                gunner.style.top = top + "px";
+                gunnery.value = movement;
+            }
+        }
+        function cordinates(myevent) {
+            if (myevent.keyCode == 38 || myevent.keyCode == 37)
+                movegunner('u');
+            else if (myevent.keyCode == 40 || myevent.keyCode == 39)
+                movegunner('d');
+            else if (myevent.keyCode == 32)
+                gunshot();
+            else if (myevent.keyCode == 82)
+                reload();
+        }
+        function move(direction) {
+            event.preventDefault();
+            movegunner(direction);
+            console.log('move');
+        }
+        function stopgunner() {
+            clearTimeout(movetimer);
+            movetimer = 0;
+        }
+        var shoottimer = 0;
+        var bullets = 10;
+        function gunshot() {
+            event.preventDefault();
+            if (shoottimer || bullets <= 0 || reloadtimer)
+                return;
+            shoottimer = setTimeout(shoot, 1000);
+            function shoot() {
+                gunsound.play();
+                bullets--;
+                bull.innerHTML = bullets
+                clearTimeout(shoottimer);
+                shoottimer = 0;
+            }
+        }
+        var reloadtimer = 0;
+        function reload() {
+            event.preventDefault(); console.log('reloadtimer', reloadtimer);
+            if (reloadtimer)
+                return;
+            reloadtimer = setTimeout(gunreload, 3000);
+            function gunreload() {
+                console.log('gunload');
+                reloadsound.play();
+                bullets = 10;
+                bull.innerHTML = bullets
+                clearTimeout(reloadtimer);
+                reloadtimer = 0;
+            }
+        }
+    </script>
+    <title>Zombie Game</title>
+</head>
+<body onkeydown="cordinates(event);" onkeyup="stopgunner();">
+    <form name="Zombie kill Game">
+        <div id="MyCanvas" style="width: 1000px; height: 800px; border:1px solid black; position: relative;">
+            <img id="gunner" src="gunnerbase.png" style="position: absolute; height: 80px; left: 0px; width:80px; top: 640px">
+            <img id="zombie0" src="zombie0.png" style="height: 80px; position: absolute; top: 100px; left: 950px;" />
+            <img id="zombie1" src="zombie1.png" style="height: 80px; position: absolute; top: 225px; left: 800px;" />
+            <audio src="gunshot.mp3" id="gunsound"></audio>
+            <audio src="reload.mp3" id="reloadsound"></audio>
+            <input type="hidden" name="gunnery" id="gunnery" value="8" />
+        </div>
+        <p id="messages"></p>
+        <table style="position: absolute; left: 1010px; top: 20px;">
+            <tr>
+                <td>
+                    <div>Zombies killed:<span id="dead">0</span></div>
+                    <div>Ammo left:<span id="bull">10</span></div>
+                    <div>Gun status:<span id="status">ready</span></div>
+                </td>
+            </tr>
+            <tr>
+                <td align="center">
+                    <button id="upbtn" onclick="move('u');" onmouseup="stopgunner();" ;>
+                        <img src="uparrow.png" width="25">
+                    </button>
+                </td>
+            </tr>
+            <tr>
+                <td align="center">
+                    <button id="shootbtn" style="width:200px; height: 40px;" onclick="gunshot();">Shoot</button>
+                </td>
+                <td align="center">
+                    <button id="rightbtn" style="height:40px; width:60px;" onclick="reload();">Reload</button>
+                </td>
+            </tr>
+            <tr>
+                <td align="center">
+                    <button id="downbtn" onclick="move('d');" onmouseup="stopgunner();">
+                        <img src="downarrow.png" width="25">
+                    </button>
+                </td>
+            </tr>
+        </table>
+    </form>
+</body>
+
+</html>
