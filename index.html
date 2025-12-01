@@ -2,27 +2,76 @@
 <html>
 
 <head>
+    <style>
+        #GameOver {
+            position: absolute;
+            left: 350px;
+            top: 380px;
+            color: red;
+            font-size: 10px;
+            opacity: 0;
+            transition: font-size 5s ease, opacity 1s ease;
+
+        }
+
+        #GameOver.grow {
+            font-size: 44px;
+            display: block;
+            opacity: 1;
+        }
+    </style>
     <script>
         var movetimer = 0;
+        var moveFrameTimer = 0;
+        var fireFrameTimer = 0;
+        var walkframe = 0;
+        var fireframe = 0;
+        var comfirmdead = 0;
+        var spawnms = 1000;
+        var rows = {
+            0: [],
+            1: [],
+            2: [],
+            3: [],
+            4: [],
+            5: [],
+            6: [],
+            7: [],
+            8: [],
+            9: [],
+        }
+
         function movegunner(direction) {
-            if (movetimer)
+            if (movetimer || comfirmdead)
                 return;
             movetimer = setTimeout(gunnerframe, 40);
             var movement = parseInt(gunnery.value);
             function gunnerframe() {
-                if (direction == 'u')
+                var flip = -1;
+                if (direction == 'u') {
                     movement -= 1;
-                else
+                    flip = 1;
+                    gunner.style.transform = "scaleX(1)"
+                } else {
                     movement += 1;
+                    flip = -1;
+                }
                 if (movement < 0)
                     movement = 0;
                 else if (movement > 9)
                     movement = 9;
                 var top = movement * 80;
                 gunner.style.top = top + "px";
+                gunner.style.transform = "scaleX(" + flip + ")"
+                if (direction == 'd')
+                    gunner.style.transform = "scaleX(-1)"
                 gunnery.value = movement;
+
+                startwalkanimation();
+
             }
         }
+
         function cordinates(myevent) {
             if (myevent.keyCode == 38 || myevent.keyCode == 37)
                 movegunner('u');
@@ -34,34 +83,105 @@
                 reload();
         }
         function move(direction) {
-            event.preventDefault();
             movegunner(direction);
-            console.log('move');
+
         }
         function stopgunner() {
             clearTimeout(movetimer);
             movetimer = 0;
+
         }
+        function gunstatus(text) {
+            document.getElementById("status").innerHTML = text;
+        }
+
         var shoottimer = 0;
         var bullets = 10;
         function gunshot() {
-            event.preventDefault();
-            if (shoottimer || bullets <= 0 || reloadtimer)
+            if (shoottimer || reloadtimer || comfirmdead)
                 return;
-            shoottimer = setTimeout(shoot, 1000);
-            function shoot() {
-                gunsound.play();
-                bullets--;
-                bull.innerHTML = bullets
+            if (bullets <= 0) {
+                reload();
+                return;
+            }
+
+            gunsound.play();
+            shootzombie();
+            bullets = bullets - 1;
+            bull.innerHTML = bullets;
+
+            gunstatus("cooldown");
+
+            shoottimer = setTimeout(shootdone, 1000);
+
+            function shootdone() {
+                clearTimeout(shoottimer);
+                shoottimer = 0;
+
+                if (bullets <= 0) {
+                    reload();
+                }
+                else if (!reloadtimer) {
+                    gunstatus("ready");
+                }
+            }
+
+
+            function startfireanimation() {
+                if (fireFrameTimer)
+                    clearInterval(fireFrameTimer);
+
+                fireframe = 0;
+                fireFrameTimer = setInterval(nextfireframe, 40);
+
+                function nextfireframe() {
+                    gunner.src = "gunnerfire" + fireframe + ".png";
+
+                    fireframe = fireframe + 1;
+
+                    if (fireframe > 2) {
+                        clearInterval(fireFrameTimer);
+                        fireFrameTimer = 0;
+                        gunner.src = "gunnerbase.png";
+                    }
+                }
+            }
+            startfireanimation();
+
+        }
+
+
+        function startwalkanimation() {
+            if (moveFrameTimer)
+                clearInterval(moveFrameTimer);
+
+            walkframe = 0;
+            moveFrameTimer = setInterval(nextwalkframe, 40);
+
+            function nextwalkframe() {
+                gunner.src = "gunnerup" + walkframe + ".png";
+
+                walkframe = walkframe + 1;
+
+                if (walkframe >= 8) {
+                    clearInterval(moveFrameTimer);
+                    moveFrameTimer = 0;
+                    gunner.src = "gunnerbase.png";
+                    gunner.style.transform = "scaleX(1)";
+                }
+            }
+        }
+
+        var reloadtimer = 0;
+        function reload() {
+
+            if (reloadtimer || comfirmdead)
+                return;
+            if (shoottimer) {
                 clearTimeout(shoottimer);
                 shoottimer = 0;
             }
-        }
-        var reloadtimer = 0;
-        function reload() {
-            event.preventDefault(); console.log('reloadtimer', reloadtimer);
-            if (reloadtimer)
-                return;
+            gunstatus("reloading");
             reloadtimer = setTimeout(gunreload, 3000);
             function gunreload() {
                 console.log('gunload');
@@ -70,20 +190,126 @@
                 bull.innerHTML = bullets
                 clearTimeout(reloadtimer);
                 reloadtimer = 0;
+
+                gunstatus("ready");
             }
         }
-         
+        var zombiecounter = 0;
+        function generatezombie() {
+            if (comfirmdead)
+                return
+            spawning();
+            zombiecounter++;
+            var randomNumber = Math.floor(Math.random() * 10);
+            rows[randomNumber].push({ id: 'zombie' + zombiecounter, steps: 0, alive: true });
+            var img = document.createElement('img')
+            img.id = 'zombie' + zombiecounter
+            img.src = 'zombie0.png'
+            img.style.position = "absolute";
+            img.style.height = "80px";
+            img.style.top = (randomNumber * 80) + "px";
+            img.style.right = "0px";
+            MyCanvas.appendChild(img);
+        }
+        function spawning() {
+            if (spawnms > 700)
+                spawnms -= 100
+            else if (spawnms > 500)
+                spawnms -= 50
+            else if (spawnms > 250)
+                spawnms -= 25
+            else if (spawnms > 150)
+                spawnms -= 10
+            else if (spawnms > 100)
+                spawnms -= 1
+            else spawnms = 100;
+        }
+        function movezombie() {
+            if (comfirmdead)
+                return;
+            for (x = 0; x < 10; x++) {
+                for (i = 0; i < rows[x].length; i++) {
+                    var id = rows[x][i].id
+                    var steps = Number(rows[x][i].steps)
+                    var alive = rows[x][i].alive
+
+                    if (alive) {
+                        rows[x][i].steps = 1 + steps
+                        if (steps >= 92) {
+                            hitgirl();
+                        }
+                        console.log(rows[x][i].steps, id);
+                        var img = document.getElementById(id);
+                        img.style.right = (rows[x][i].steps * 10) + 'px';
+                        var currentStep = Number(img.src.slice(-5, -4));
+                        var stepRemainder = (currentStep + 1) % 4;
+                        img.src = "zombie" + stepRemainder + ".png";
+                    }
+                }
+            }
+
+        }
+        window.onload = function () {
+            MyCanvas = document.getElementById("MyCanvas");
+            setTimeout(function () {
+                generatezombie();
+                setInterval(generatezombie, spawnms);
+                setInterval(movezombie, 200);
+            }, spawnms);
+        };
+        function hitgirl() {
+            comfirmdead = 1;
+            GameOver.setAttribute("class", "grow")
+            var die = 0;
+            var dying = setInterval(
+                function () {
+                    gunner.src = "gunnerdie" + die + ".png"; die++;
+                    if (die > 3)
+                        clearInterval(dying)
+                }, 200
+            )
+
+            eatensound.play();
+        }
+        function shootzombie() {
+            var movement = parseInt(gunnery.value);
+            var zombies = rows[movement]
+            var killzombie = {}
+            zombies.forEach(function (zombie) {
+                if (zombie.alive && zombie.steps > (killzombie.steps ?? 0))
+                    killzombie = zombie
+            })
+            if (killzombie.id) {
+                rows[movement] = rows[movement].map(function (zombie) {
+                    if (killzombie.id == zombie.id) {
+                        zombie.alive = false
+                        dead.innerHTML = parseInt(dead.innerHTML) + 1
+                        var die = 0;
+                        var dying = setInterval(
+                            function () {
+                                document.getElementById(zombie.id).src = "zombiedead" + die + ".png"; die++;
+                                if (die > 3)
+                                    clearInterval(dying)
+                            }, 200
+                        )
+                    }
+                    return zombie
+                })
+            }
+        }
     </script>
     <title>Zombie Game</title>
 </head>
-<body onkeydown="cordinates(event);" onkeyup="stopgunner();" >
+
+<body onkeydown="cordinates(event);" onkeyup="stopgunner();">
     <form name="Zombie kill Game">
         <div id="MyCanvas" style="width: 1000px; height: 800px; border:1px solid black; position: relative;">
-            <img id="gunner" src="gunnerbase.png" style="position: absolute; height: 80px; left: 0px; width:80px; top: 640px">
-            <img id="zombie0" src="zombie0.png" style="height: 80px; position: absolute; top: 100px; left: 950px;" />
-            <img id="zombie1" src="zombie1.png" style="height: 80px; position: absolute; top: 225px; left: 800px;" />
+            <span id="GameOver">Game Over!</span>
+            <img id="gunner" src="gunnerbase.png"
+                style="position: absolute; height: 80px; left: 0px; width:80px; top: 640px">
             <audio src="gunshot.mp3" id="gunsound"></audio>
             <audio src="reload.mp3" id="reloadsound"></audio>
+            <audio src="eaten.mp3" id="eatensound"></audio>
             <input type="hidden" name="gunnery" id="gunnery" value="8" />
         </div>
         <p id="messages"></p>
@@ -97,22 +323,24 @@
             </tr>
             <tr>
                 <td align="center">
-                    <button id="upbtn" onclick="move('u');" onmouseup="stopgunner();" ;>
+                    <button id="upbtn" type="button" onclick="move('u');" onmouseup="stopgunner();" ;>
                         <img src="uparrow.png" width="25">
                     </button>
                 </td>
             </tr>
             <tr>
                 <td align="center">
-                    <button id="shootbtn" style="width:200px; height: 40px;" onclick="gunshot();">Shoot</button>
+                    <button id="shootbtn" type="button" style="width:200px; height: 40px;"
+                        onclick="gunshot();">Shoot</button>
                 </td>
                 <td align="center">
-                    <button id="rightbtn" style="height:40px; width:60px;" onclick="reload();">Reload</button>
+                    <button id="rightbtn" type="button" style="height:40px; width:60px;"
+                        onclick="reload();">Reload</button>
                 </td>
             </tr>
             <tr>
                 <td align="center">
-                    <button id="downbtn" onclick="move('d');" onmouseup="stopgunner();">
+                    <button id="downbtn" type="button" onclick="move('d');" onmouseup="stopgunner();">
                         <img src="downarrow.png" width="25">
                     </button>
                 </td>
